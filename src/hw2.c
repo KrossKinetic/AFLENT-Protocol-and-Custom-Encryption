@@ -10,11 +10,46 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+int convert_hex_to_dec(char x);
 //Packet Code:
-
+// cmake --build build
+// Stick to Hex interpretation of Binary
+// {0x0C, 0x00, 0x08, 0x12, 0x34, 0x56, 0x78};
 void print_packet(unsigned char packet[])
 {
-	(void) packet; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
+	// Array Number
+	int row_zero = packet[0];
+	int array_number = (row_zero & 0xFC) >> 2;
+	printf("Array Number: %d\n",array_number);
+
+	// Fragment Number
+	int first_frag_part = (row_zero & 0x03) << 3;
+	int row_one = packet[1];
+	int second_frag_part = (row_one & 0xE0) >> 5;
+	int full_frag = first_frag_part | second_frag_part;
+	printf("Fragment Number: %d\n",full_frag);
+
+	// Length
+	int first_length_part = (row_one & 0x1F) << 5;
+	int row_two = packet[2];
+	int second_length_part = (row_two & 0xF8) >> 3;
+	int full_length = first_length_part | second_length_part;
+	printf("Length: %d\n",full_length);
+
+	// Encrypt, Endian, Last
+	int encrypt = (row_two & 0x04);
+	int endian = (row_two & 0x02);
+	int last = (row_two & 0x01);
+	printf("Encrypted: %d\n",encrypt);
+	printf("Endianness: %d\n",endian);
+	printf("Last: %d\n",last);
+
+	printf("Data: ");
+	for (int i = 3; i < (full_length*4)+3; i+=4){
+		int full_payload_sequence = (packet[i] << 8*3) | (packet[i+1] << 8*2) | (packet[i+2] << 8) | packet[i+3];
+		printf("%0x ",full_payload_sequence);
+	}
+	printf("\n");
 }
 
 unsigned char* build_packets(int data[], int data_length, int max_fragment_size, int endianness, int array_number)
