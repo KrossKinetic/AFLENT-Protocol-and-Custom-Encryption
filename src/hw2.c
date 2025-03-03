@@ -37,8 +37,8 @@ void print_packet(unsigned char packet[])
 	printf("Length: %d\n",full_length);
 
 	// Encrypt, Endian, Last
-	int encrypt = (row_two & 0x04);
-	int endian = (row_two & 0x02);
+	int encrypt = (row_two & 0x04) >> 2;
+	int endian = (row_two & 0x02) >> 1;
 	int last = (row_two & 0x01);
 	printf("Encrypted: %d\n",encrypt);
 	printf("Endianness: %d\n",endian);
