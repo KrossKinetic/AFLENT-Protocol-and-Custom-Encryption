@@ -45,9 +45,16 @@ void print_packet(unsigned char packet[])
 	printf("Last: %d\n",last);
 
 	printf("Data: ");
-	for (int i = 3; i < (full_length*4)+3; i+=4){
-		int full_payload_sequence = (packet[i] << 8*3) | (packet[i+1] << 8*2) | (packet[i+2] << 8) | packet[i+3];
-		printf("%0x ",full_payload_sequence);
+	if (endian == 0){
+		for (int i = 3; i < (full_length*4)+3; i+=4){
+			int full_payload_sequence = (packet[i] << 8*3) | (packet[i+1] << 8*2) | (packet[i+2] << 8) | packet[i+3];
+			printf("%0x ",full_payload_sequence);
+		}
+	} else if (endian == 1){
+		for (int i = 3; i < (full_length*4)+3; i+=4){
+			int full_payload_sequence = packet[i]| (packet[i+1] << 8*1) | (packet[i+2] << 8*2) | (packet[i+3] << 8*3);
+			printf("%0x ",full_payload_sequence);
+		}
 	}
 	printf("\n");
 }
