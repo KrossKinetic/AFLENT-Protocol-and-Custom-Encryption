@@ -175,10 +175,6 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 				}
 			}
 		}
-
-		for (int t = 0; t < 10; t++) {
-			printf("%02x\n", (unsigned char) aflent[t]);
-		}
 	}
 
 	return aflent;
