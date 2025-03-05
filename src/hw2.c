@@ -61,12 +61,127 @@ void print_packet(unsigned char packet[])
 
 unsigned char* build_packets(int data[], int data_length, int max_fragment_size, int endianness, int array_number)
 {
-	(void) data; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) data_length; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) max_fragment_size; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) endianness; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) array_number; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-    return NULL;
+	unsigned char *aflent;
+
+	if ((data_length*4) <= max_fragment_size){
+		int size = 3+(data_length*4);
+		aflent = (unsigned char *) malloc(size * sizeof(char));
+
+		// Created Row 0
+		int row0 = array_number<<2;
+		int fragment_number = 0;
+		row0 = ((fragment_number & 0x18) >> 3) | row0;
+
+		// Created Row 1
+		int row1 = (fragment_number & 0x07) << 5;
+		row1 = ((data_length & 0x3E0) >> 5) | row1;
+		
+		// Created Row 2
+		int row2 = ((data_length & 0x1F) << 3);
+		row2 = (row2 | (0<<2)); // if encrypted
+		row2 = (endianness << 1) | row2; // if endian
+		row2 = (row2 | (1)); // if last
+
+		aflent[0] = row0;
+		aflent[1] = row1;
+		aflent[2] = row2;
+
+		int payload_index = 3;
+		for (int i = 0; i < data_length;i++){
+			int main_val = data[i];
+			
+			int first = (main_val & 0xFF000000) >> 24;
+			int second = (main_val & 0x00FF0000) >> 16;
+			int third = (main_val & 0x0000FF00) >> 8;
+			int fourth = (main_val & 0x000000FF);
+
+			if (endianness == 0){
+				aflent[payload_index++] = first;
+				aflent[payload_index++] = second;
+				aflent[payload_index++] = third;
+				aflent[payload_index++] = fourth;
+			}else{
+				aflent[payload_index++] = fourth;
+				aflent[payload_index++] = third;
+				aflent[payload_index++] = second;
+				aflent[payload_index++] = first;
+			}
+
+		}
+	} else{
+		int val = ceil(((data_length*4)/(max_fragment_size*1.0)));
+		int size = (data_length)*4 + (3*val);
+		aflent = (unsigned char *) malloc(size * sizeof(char));
+
+		int remainder_data = (data_length*4)%(max_fragment_size);
+
+		int payload_index = 0;
+		int i = 0;
+
+		for (int frag_number = 0; frag_number<val; frag_number++){
+			
+			// Created Row 0
+			int row0 = array_number<<2;
+			int fragment_number = frag_number;
+			row0 = ((fragment_number & 0x18) >> 3) | row0;
+
+			// Created Row 1
+			int row1 = (fragment_number & 0x07) << 5;
+			
+			// Created Row 2
+			int row2;
+
+			int counter;
+
+			if ((frag_number == val-1) && (remainder_data != 0)){
+				row1 = ((remainder_data & 0x3E0) >> 5) | row1;
+				row2 = ((remainder_data & 0x1F) << 3);
+				counter = remainder_data;
+			} else {
+				row1 = (((val-1) & 0x3E0) >> 5) | row1;
+				row2 = (((val-1) & 0x1F) << 3);
+				counter = val-1;
+			}
+
+			row2 = (row2 | (0<<2)); // if encrypted
+			row2 = (endianness << 1) | row2; // if endian
+			
+			if ((frag_number == val-1)){
+				row2 = (row2 | (1)); // if last
+			} else {
+				row2 = (row2 | (0)); // if not last
+			}
+
+			aflent[payload_index++] = row0;
+			aflent[payload_index++] = row1;
+			aflent[payload_index++] = row2;
+
+			for (int k = 0;k<counter;k++){
+				int main_val = data[i++];
+				int first = (main_val & 0xFF000000) >> 24;
+				int second = (main_val & 0x00FF0000) >> 16;
+				int third = (main_val & 0x0000FF00) >> 8;
+				int fourth = (main_val & 0x000000FF);
+				if (endianness == 0){
+					aflent[payload_index++] = first;
+					aflent[payload_index++] = second;
+					aflent[payload_index++] = third;
+					aflent[payload_index++] = fourth;
+				}else{
+					aflent[payload_index++] = fourth;
+					aflent[payload_index++] = third;
+					aflent[payload_index++] = second;
+					aflent[payload_index++] = first;
+				}
+			}
+		}
+
+		for (int t = 0; t < size; t++) {
+			printf("%02x\n", (unsigned char) aflent[t]);
+		}
+	}
+
+	return aflent;
 }
 
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
