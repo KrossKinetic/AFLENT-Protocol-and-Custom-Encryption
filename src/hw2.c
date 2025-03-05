@@ -118,7 +118,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 		int payload_index = 0;
 		int i = 0;
 
-		for (int frag_number = 0; frag_number<val; frag_number++){
+		for (int frag_number = 0; frag_number < val; frag_number++){
 			
 			// Created Row 0
 			int row0 = array_number<<2;
@@ -134,13 +134,13 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 			int counter;
 
 			if ((frag_number == val-1) && (remainder_data != 0)){
-				row1 = ((remainder_data & 0x3E0) >> 5) | row1;
-				row2 = ((remainder_data & 0x1F) << 3);
-				counter = remainder_data;
+				row1 = ((((remainder_data/4)) & 0x3E0) >> 5) | row1;
+				row2 = ((((remainder_data/4)) & 0x1F) << 3);
+				counter = (remainder_data/4);
 			} else {
-				row1 = (((val-1) & 0x3E0) >> 5) | row1;
-				row2 = (((val-1) & 0x1F) << 3);
-				counter = val-1;
+				row1 = (((max_fragment_size/4) & 0x3E0) >> 5) | row1;
+				row2 = (((max_fragment_size/4) & 0x1F) << 3);
+				counter = (max_fragment_size/4);
 			}
 
 			row2 = (row2 | (0<<2)); // if encrypted
@@ -156,7 +156,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 			aflent[payload_index++] = row1;
 			aflent[payload_index++] = row2;
 
-			for (int k = 0;k<counter;k++){
+			for (int k = 0;k < counter; k++){
 				int main_val = data[i++];
 				int first = (main_val & 0xFF000000) >> 24;
 				int second = (main_val & 0x00FF0000) >> 16;
@@ -176,7 +176,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 			}
 		}
 
-		for (int t = 0; t < size; t++) {
+		for (int t = 0; t < 10; t++) {
 			printf("%02x\n", (unsigned char) aflent[t]);
 		}
 	}
