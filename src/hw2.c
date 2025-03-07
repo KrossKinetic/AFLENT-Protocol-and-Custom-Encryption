@@ -201,7 +201,7 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 	int total_fragments = 0;
 
 	while ((last_counter != 0) || (total_fragments != header_found_counter)){
-		
+
 		// Array Number
 		int row_zero = packets[i];
 		int array_number = (row_zero & 0xFC) >> 2;
@@ -220,7 +220,6 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 
 		// Encrypt, Endian, Last
 		int last = (row_two & 0x01);
-		//int endian = (row_two & 0x02) >> 1;
 
 		if (last == 1){
 			last_counter--;
@@ -294,6 +293,9 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		final_array[k] = realloc(final_array[k],size * sizeof(int));
 	}
 	
+	for (int k = 0; k< array_count; k++) {
+		free(temp_array[k]);
+	}
 	free(temp_array);
 	return final_array;
 }
