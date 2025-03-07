@@ -181,11 +181,122 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 }
 
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
-{
-    (void) packets; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) array_count; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-	(void) array_lengths; //This line is only here to avoid compiler issues. Once you implement the function, please delete this line
-    return NULL;
+{	
+	int frag_count = 32;
+	int **temp_array = malloc(array_count*sizeof(int*));
+	for (int i = 0; i < array_count; i++) {
+		temp_array[i] = malloc(frag_count*sizeof(int));
+	}
+
+	for (int i = 0; i<array_count;i++){
+		for (int k = 0; k<frag_count;k++){
+			temp_array[i][k] = -1;
+		}
+	}
+
+	int header_found_counter = 0;
+	int i = 0;
+	int last_counter = array_count;
+	int total_fragments = 0;
+
+	while (1){ // Yes I like playing with fire
+		// Break case when everything has been seen
+		if ((last_counter == 0) && (total_fragments == header_found_counter)) break;
+
+		// Array Number
+		int row_zero = packets[i];
+		int array_number = (row_zero & 0xFC) >> 2;
+
+		// Fragment Number
+		int first_frag_part = (row_zero & 0x03) << 3;
+		int row_one = packets[i+1];
+		int second_frag_part = (row_one & 0xE0) >> 5;
+		int fragment_number = first_frag_part | second_frag_part;
+
+		// Length
+		int first_length_part = (row_one & 0x1F) << 5;
+		int row_two = packets[i+2];
+		int second_length_part = (row_two & 0xF8) >> 3;
+		int length = first_length_part | second_length_part;
+
+		// Encrypt, Endian, Last
+		int last = (row_two & 0x01);
+		//int endian = (row_two & 0x02) >> 1;
+
+		if (last == 1){
+			last_counter--;
+			total_fragments += (fragment_number+1);
+		}
+
+		temp_array[array_number][fragment_number] = i;
+
+		i += (length*4)+3;
+		header_found_counter++;
+	}
+
+	// Creating the final array
+	int **final_array = malloc(array_count * sizeof(int*));
+	for (int k = 0; k < array_count; k++){
+		final_array[k] = malloc(frag_count * sizeof(int));
+	}
+
+	// Setting all the values to 0
+	for (int j = 0; j<array_count;j++){
+		for (int k = 0; k<frag_count;k++){
+			final_array[j][k] = -1;
+		}
+	}
+
+	for (int k = 0; k < array_count; k++){
+		int counter = 0;
+		for (int j = 0; j < frag_count; j++){
+			int index = temp_array[k][j];
+			if (index == -1) break;
+
+			// Length
+			int row_one = packets[index+1];
+			int first_length_part = (row_one & 0x1F) << 5;
+			int row_two = packets[index+2];
+			int second_length_part = (row_two & 0xF8) >> 3;
+			int full_length = first_length_part | second_length_part;
+			
+			// Endian
+			int endian = (row_two & 0x02) >> 1;
+
+			int full_payload_sequence;
+
+			if (endian == 0){
+				for (int l = index+3; l < (full_length*4)+index+3; l+=4){
+					full_payload_sequence = (packets[l] << 8*3) | (packets[l+1] << 8*2) | (packets[l+2] << 8) | packets[l+3];
+					final_array[k][counter++] = full_payload_sequence;
+				}
+			} else if (endian == 1){
+				for (int l = index+3; l < (full_length*4)+index+3; l+=4){
+					full_payload_sequence = packets[l]| (packets[l+1] << 8*1) | (packets[l+2] << 8*2) | (packets[l+3] << 8*3);
+					final_array[k][counter++] = full_payload_sequence;
+				}
+			}
+		}
+	}
+
+	// Array Lengths Created
+	for (int k = 0; k < array_count; k++){
+		int array_lengths_counter = 0;
+		for (int j = 0; j < frag_count; j++){
+			if (final_array[k][j] == -1) break;
+			array_lengths_counter++;
+		}
+		array_lengths[k] = array_lengths_counter;
+	}
+
+	// Reallocating and Trimming
+	for (int k = 0; k < array_count; k++){
+		int size = array_lengths[k];
+		final_array[k] = realloc(final_array[k],size * sizeof(int));
+	}
+	
+	free(temp_array);
+	return final_array;
 }
 
 
