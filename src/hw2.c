@@ -78,7 +78,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 		
 		// Created Row 2
 		int row2 = ((data_length & 0x1F) << 3);
-		row2 = (row2 | (0<<2)); // if encrypted
+		row2 = (row2 | (0<<2)); // if encrypte
 		row2 = (endianness << 1) | row2; // if endian
 		row2 = (row2 | (1)); // if last
 
@@ -182,7 +182,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
 {	
-	int sentinel_value = -120;
+	int sentinel_value = -13123;
 	int frag_count = 32;
 	int **temp_array = malloc(array_count*sizeof(int*));
 	for (int i = 0; i < array_count; i++) {
@@ -238,7 +238,6 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		final_array[k] = malloc(frag_count * sizeof(int));
 	}
 
-	// Setting all the values to 0
 	for (int j = 0; j<array_count;j++){
 		for (int k = 0; k<frag_count;k++){
 			final_array[j][k] = sentinel_value;
@@ -293,10 +292,10 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		final_array[k] = realloc(final_array[k],size * sizeof(int));
 	}
 	
-	for (int k = 0; k< array_count; k++) {
-		free(temp_array[k]);
-	}
+	// Freeing Heap
+	for (int k = 0; k< array_count; k++) free(temp_array[k]);
 	free(temp_array);
+	
 	return final_array;
 }
 
