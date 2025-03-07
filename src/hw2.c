@@ -197,11 +197,16 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 
 	int header_found_counter = 0;
 	int i = 0;
-	int last_counter = array_count;
+	int last_counter[array_count];
+	
+	for (int k = 0; k<array_count;k++){
+		last_counter[k] = 0;
+	}
+
 	int total_fragments = 0;
+	int all_found = 0;
 
-	while ((last_counter != 0) || (total_fragments != header_found_counter)){
-
+	while ((all_found != 1) || (total_fragments != header_found_counter)){
 		// Array Number
 		int row_zero = packets[i];
 		int array_number = (row_zero & 0xFC) >> 2;
@@ -222,8 +227,16 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		int last = (row_two & 0x01);
 
 		if (last == 1){
-			last_counter--;
+			last_counter[array_number] = 1;
 			total_fragments += (fragment_number+1);
+		}
+
+		all_found = 1;
+		for (int k = 0; k < array_count; k++) {
+			if (last_counter[k] == 0) {
+				all_found = 0;
+				break;
+			}
 		}
 
 		temp_array[array_number][fragment_number] = i;
