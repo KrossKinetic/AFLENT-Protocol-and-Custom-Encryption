@@ -200,10 +200,8 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 	int last_counter = array_count;
 	int total_fragments = 0;
 
-	while (1){ // Yes I like playing with fire
-		// Break case when everything has been seen
-		if ((last_counter == 0) && (total_fragments == header_found_counter)) break;
-
+	while ((last_counter != 0) || (total_fragments != header_found_counter)){
+		
 		// Array Number
 		int row_zero = packets[i];
 		int array_number = (row_zero & 0xFC) >> 2;
