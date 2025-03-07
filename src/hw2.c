@@ -182,6 +182,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
 {	
+	int sentinel_value = -120;
 	int frag_count = 32;
 	int **temp_array = malloc(array_count*sizeof(int*));
 	for (int i = 0; i < array_count; i++) {
@@ -190,7 +191,7 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 
 	for (int i = 0; i<array_count;i++){
 		for (int k = 0; k<frag_count;k++){
-			temp_array[i][k] = -1;
+			temp_array[i][k] = sentinel_value;
 		}
 	}
 
@@ -243,7 +244,7 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 	// Setting all the values to 0
 	for (int j = 0; j<array_count;j++){
 		for (int k = 0; k<frag_count;k++){
-			final_array[j][k] = -1;
+			final_array[j][k] = sentinel_value;
 		}
 	}
 
@@ -251,7 +252,7 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		int counter = 0;
 		for (int j = 0; j < frag_count; j++){
 			int index = temp_array[k][j];
-			if (index == -1) break;
+			if (index == sentinel_value) break;
 
 			// Length
 			int row_one = packets[index+1];
@@ -283,7 +284,7 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 	for (int k = 0; k < array_count; k++){
 		int array_lengths_counter = 0;
 		for (int j = 0; j < frag_count; j++){
-			if (final_array[k][j] == -1) break;
+			if (final_array[k][j] == sentinel_value) break;
 			array_lengths_counter++;
 		}
 		array_lengths[k] = array_lengths_counter;
