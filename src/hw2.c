@@ -182,7 +182,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
 {	
-	int sentinel_value = -1312300000;
+	int sentinel_value = -1;
 	int frag_count = 32;
 	int **temp_array = malloc(array_count*sizeof(int*));
 	for (int i = 0; i < array_count; i++) {
@@ -226,10 +226,10 @@ int** create_arrays(unsigned char packets[], int array_count, int *array_lengths
 		// Encrypt, Endian, Last
 		int last = (row_two & 0x01);
 
-		if (last == 1){
+		if (last == 1 && last_counter[array_number] == 0) {
 			last_counter[array_number] = 1;
 			total_fragments += (fragment_number+1);
-		}
+		}		
 
 		all_found = 1;
 		for (int k = 0; k < array_count; k++) {
