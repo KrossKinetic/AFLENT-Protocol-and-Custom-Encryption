@@ -392,12 +392,12 @@ void sbu_expand_keys(sbu_key_t key, block_t *expanded_keys)
     expanded_keys[0] = (key & 0xffffffff);
     expanded_keys[1] = ((key >> 32) & (0xffffffff));
 
-    for (int i = 2; i <= 32; i++) {
-		expanded_keys[i] = (table[(expanded_keys[i-1] ^ expanded_keys[i-2]) % 32] ^ expanded_keys[i-1]);
+    for (int i = 2; i <= 31; i++) {
+		expanded_keys[i] = (table[(expanded_keys[i-1] ^ expanded_keys[i-2]) % 64] ^ expanded_keys[i-1]);
 	}
 
     for (int i = 29; i >=0; i--) {
-        expanded_keys[i] = (table[(expanded_keys[i+1] ^ expanded_keys[i+2]) % 32] ^ expanded_keys[i]);
+        expanded_keys[i] = (table[(expanded_keys[i+1] ^ expanded_keys[i+2]) % 64] ^ expanded_keys[i]);
     }
 }
 
