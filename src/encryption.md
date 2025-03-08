@@ -42,14 +42,14 @@ S[1] := K[63:32]
 **Step 2**
 ```
 // Generate key schedule, iterating forward
-for i in 2,..., 32:
-    S[i] = T[ (S[i - 1] XOR S[i - 2]) % 32 ] XOR S[i - 1]
+for i in 2,..., 31:
+    S[i] = T[ (S[i - 1] XOR S[i - 2]) % 64 ] XOR S[i - 1]
 ```
 **Step 3**
 ```
 // Generate key schedule, iterating backward
 for i in 29,..., 0:
-    S[i] = T[ (S[i + 1] XOR S[i + 2]) % 32 ] XOR S[i]
+    S[i] = T[ (S[i + 1] XOR S[i + 2]) % 64 ] XOR S[i]
 ```
 
 ## Encryption
@@ -97,10 +97,10 @@ scramble(B, S, j, op)
     keyA := S[j]
     keyB := S[31 - j]
     B := op(B)
-    B[8:0]   := scramble_op(B, 0, keyA, keyB)
-    B[16:8]  := scramble_op(B, 1, keyA, keyB)
-    B[24:16] := scramble_op(B, 2, keyA, keyB)
-    B[32:24] := scramble_op(B, 3, keyA, keyB)
+    B[7:0]   := scramble_op(B, 0, keyA, keyB)
+    B[15:8]  := scramble_op(B, 1, keyA, keyB)
+    B[23:16] := scramble_op(B, 2, keyA, keyB)
+    B[31:24] := scramble_op(B, 3, keyA, keyB)
     ret B
 
 mash(B, S)
@@ -165,31 +165,31 @@ Note the inverse function of reverse is itself.
 ### Decryption Subprocedures
 
 ```
-r_rot_table := [ 7, 5, 3, 2 ]
+r_rot_table := [ 2, 3, 5, 7 ]
 
 byte(B, i)
     idx = i mod 4
     ret B[8*(idx + 1)-1 : 8*idx]
 
 r_scramble_op(B, i, keyA, keyB)
-    B1 = rotr(B, r_rot_table[i])
-    ret byte(B1, i) XOR ( byte(B1, i-1) AND byte(B1, i-2) ) XOR ( ~byte(B1, i-1) AND byte(B1, i-3) ) XOR byte(keyA, i) ^ byte(keyB, i)
+    B1 = rotr(byte(B, i), r_rot_table[i])
+    ret B1 XOR ( byte(B, i-1) AND byte(B, i-2) ) XOR ( ~byte(B, i-1) AND byte(B, i-3) ) XOR byte(keyA, i) XOR byte(keyB, i)
 
 r_scramble(B, S, j, op)
     keyA := S[j]
     keyB := S[31 - j]
-    B[32:24] := r_scramble_op(B, 3, keyA, keyB)
-    B[24:16] := r_scramble_op(B, 2, keyA, keyB)
-    B[16:8]  := r_scramble_op(B, 1, keyA, keyB)
-    B[8:0]   := r_scramble_op(B, 0, keyA, keyB)
+    B[31:24] := r_scramble_op(B, 3, keyA, keyB)
+    B[23:16] := r_scramble_op(B, 2, keyA, keyB)
+    B[15:8]  := r_scramble_op(B, 1, keyA, keyB)
+    B[7:0]   := r_scramble_op(B, 0, keyA, keyB)
     B := op(B)
     ret B
 
 r_mash(B, S)
-    B[32:24] := mash_op(B, 3, S)
-    B[24:16] := mash_op(B, 2, S)
-    B[16:8]  := mash_op(B, 1, S)
-    B[8:0]   := mash_op(B, 0, S)
+    B[31:24] := mash_op(B, 3, S)
+    B[23:16] := mash_op(B, 2, S)
+    B[15:8]  := mash_op(B, 1, S)
+    B[7:0]   := mash_op(B, 0, S)
     ret B
 ```
 
@@ -207,15 +207,15 @@ decrypt_block(B, S)
     R08 := r_scramble(R07, S, 9, unshuffle1)
     R09 := r_scramble(R08, S, 8, reverse)
     R10 := r_mash(R09, S)
-    R01 := r_scramble(R10, S, 7, reverse)
-    R02 := r_scramble(R11, S, 6, unshuffle4)
-    R03 := r_scramble(R12, S, 5, unshuffle1)
-    R04 := r_scramble(R13, S, 4, reverse)
+    R11 := r_scramble(R10, S, 7, reverse)
+    R12 := r_scramble(R11, S, 6, unshuffle4)
+    R13 := r_scramble(R12, S, 5, unshuffle1)
+    R14 := r_scramble(R13, S, 4, reverse)
     R15 := r_mash(R14, S)
-    R01 := r_scramble(R15, S, 3, reverse)
-    R02 := r_scramble(R16, S, 2, unshuffle4)
-    R03 := r_scramble(R17, S, 1, unshuffle1)
-    R04 := r_scramble(R18, S, 0, reverse)
+    R16 := r_scramble(R15, S, 3, reverse)
+    R17 := r_scramble(R16, S, 2, unshuffle4)
+    R18 := r_scramble(R17, S, 1, unshuffle1)
+    R19 := r_scramble(R18, S, 0, reverse)
     ret R19
 ```
 

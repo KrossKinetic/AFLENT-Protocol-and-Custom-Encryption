@@ -389,9 +389,18 @@ uint8_t nth_byte(block_t x, uint8_t n)
 
 void sbu_expand_keys(sbu_key_t key, block_t *expanded_keys)
 {
-	(void) key;
-	(void) expanded_keys;
+    expanded_keys[0] = (key & 0xffffffff);
+    expanded_keys[1] = ((key >> 32) & (0xffffffff));
+
+    for (int i = 2; i <= 32; i++) {
+		expanded_keys[i] = (table[(expanded_keys[i-1] ^ expanded_keys[i-2]) % 32] ^ expanded_keys[i-1]);
+	}
+
+    for (int i = 29; i >=0; i--) {
+        expanded_keys[i] = (table[(expanded_keys[i+1] ^ expanded_keys[i+2]) % 32] ^ expanded_keys[i]);
+    }
 }
+
 
 block_t scramble(block_t x, block_t *keys, uint32_t round, permute_func_t op)
 {
