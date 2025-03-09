@@ -336,56 +336,133 @@ block_t table[] = {
 
 uint8_t rotl(uint8_t x, uint8_t shamt)
 {
-	(void) x;
-	(void) shamt;
-    return 0;
+	shamt = shamt % 8;
+	return (x << shamt) | (x >> (8 - shamt));
 }
 
 uint8_t rotr(uint8_t x, uint8_t shamt)
 {
-	(void) x;
-	(void) shamt;
-    return 0;
+	shamt = shamt % 8;
+	return (x >> shamt) | (x << (8 - shamt));
 }
 
 block_t reverse(block_t x)
 {
-	(void) x;
-    return 0;
+	for (int i = 0; i < 16; i++){
+		block_t first_pos = i;
+		block_t second_pos = 31-i;
+
+		block_t first_int = (x & (1 << i)) >> i;
+		block_t second_int = (x & (1 << second_pos)) >> second_pos;
+
+		// Setting first bit
+		if (first_int == 1) x |= (1 << second_pos);
+		else x &= ~(1 << second_pos);
+
+		// Setting second bit
+		if (second_int == 1) x |= (1 << first_pos);
+		else x &= ~(1 << first_pos);
+	}
+	return x;
 }
 
 block_t shuffle4(block_t x)
 {
-	(void) x;
-    return 0;
+	block_t shuffled_val = 0;
+	block_t first_half = ((x >> 16) & (0xffff));
+	block_t second_half = (x & 0xffff);
+	block_t masks[] = {0x000F,0x00F0,0x0F00,0xF000};
+	for (int i = 0; i < 4; i++){
+		block_t first_part = (first_half & masks[i])<<4*(i+1);
+		block_t second_part = (second_half & masks[i])<<4*(i);
+		shuffled_val |= first_part;
+		shuffled_val |= second_part;
+	}
+	return shuffled_val;
 }
 
 block_t unshuffle4(block_t x)
 {
-	(void) x;
-    return 0;
+	int masks1[] = {0x000000F0,0x0000F000,0x00F00000,0xF0000000};
+	int masks2[] = {0x0000000F,0x00000F00,0x000F0000,0x0F000000};
+	block_t complete_val = 0;
+
+	for (int i = 0; i < 4; i++){
+		complete_val |= (x & masks1[i]) << (3-i)*4;
+		complete_val |= (x & masks2[i]) >> i*4;
+	}
+
+	return complete_val;
 }
 
 block_t shuffle1(block_t x)
 {
-	(void) x;
-    return 0;
+	block_t shuffled_val = 0;
+	
+	block_t first_half = ((x >> 16) & (0xffff));
+	block_t second_half = (x & 0xffff);
+	
+	block_t masks[] = {0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080, 
+		0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000, 0x8000};
+
+	for (int i = 0; i < 16; i++){
+		shuffled_val |= (first_half & masks[i])<<(i+1);
+		shuffled_val |= (second_half & masks[i])<<(i);
+	}
+	return shuffled_val;
 }
 
 block_t unshuffle1(block_t x)
 {
-	(void) x;
-    return 0;
+	uint32_t masks2[] = {0x00000001,0x00000004,0x00000010,0x00000040,0x00000100,
+		0x00000400,0x00001000,0x00004000,0x00010000,0x00040000,0x00100000,
+		0x00400000,0x01000000,0x04000000,0x10000000,0x40000000
+	};
+	
+	uint32_t masks1[] = {0x00000002,0x00000008,0x00000020,0x00000080,0x00000200,
+		0x00000800,0x00002000,0x00008000,0x00020000,0x00080000,0x00200000,
+		0x00800000,0x02000000,0x08000000,0x20000000,0x80000000 
+	};
+	
+	block_t complete_val = 0;
+
+	for (int i = 0; i < 16; i++){
+		complete_val |= (x & masks1[i]) << (15-i);
+		complete_val |= (x & masks2[i]) >> i;
+	}
+
+	return complete_val;
 }
 
 uint8_t nth_byte(block_t x, uint8_t n)
 {
-	(void) x;
-	(void) n;
-    return 0;
+	uint8_t idx = n & 3;
+	return (x >> (8 * idx)) & 0xFF;
 }
 
 // ----------------- Encryption Functions ----------------- //
+
+uint8_t scramble_op(block_t B, uint8_t i, block_t keyA, block_t keyB)
+{    
+	uint8_t rot_table[] = {2, 3, 5, 7};
+    uint8_t B1 = nth_byte(B, i) ^ (nth_byte(B, i - 1) & nth_byte(B, i - 2)) ^ ((~nth_byte(B, i - 1)) & nth_byte(B, i - 3)) ^ nth_byte(keyA, i) ^ nth_byte(keyB, i);    
+    return rotl(B1, rot_table[i & 3]);
+}
+
+uint8_t r_scramble_op(block_t B, uint8_t i, block_t keyA, block_t keyB)
+{
+    uint8_t r_rot_table[] = {2, 3, 5, 7};
+    uint8_t B1 = rotr(nth_byte(B, i), r_rot_table[i & 3]);
+    return B1 ^ (nth_byte(B, i - 1) & nth_byte(B, i - 2)) ^ ((~nth_byte(B, i - 1)) & nth_byte(B, i - 3)) ^ nth_byte(keyA, i) ^ nth_byte(keyB, i);
+}
+
+uint8_t mash_op(block_t B, uint8_t i, block_t *S)
+{
+    uint8_t prev_byte = nth_byte(B, i-1);
+    uint8_t index = prev_byte & 31;
+    block_t key = S[index];
+    return nth_byte(B, i) ^ nth_byte(key, i);
+}
 
 void sbu_expand_keys(sbu_key_t key, block_t *expanded_keys)
 {
@@ -404,66 +481,185 @@ void sbu_expand_keys(sbu_key_t key, block_t *expanded_keys)
 
 block_t scramble(block_t x, block_t *keys, uint32_t round, permute_func_t op)
 {
-	(void) x;
-	(void) keys;
-	(void) round;
-	(void) op;
-    return 0;
+    block_t keyA = keys[round];
+    block_t keyB = keys[31 - round];
+    
+    block_t result = op(x);
+    
+    uint8_t byte0 = scramble_op(result, 0, keyA, keyB);
+    result = (result & 0xFFFFFF00) | byte0;
+    
+    uint8_t byte1 = scramble_op(result, 1, keyA, keyB);
+    result = (result & 0xFFFF00FF) | (byte1 << 8);
+    
+    uint8_t byte2 = scramble_op(result, 2, keyA, keyB);
+    result = (result & 0xFF00FFFF) | (byte2 << 16);
+    
+    uint8_t byte3 = scramble_op(result, 3, keyA, keyB);
+    result = (result & 0x00FFFFFF) | (byte3 << 24);
+    
+    return result;
 }
 
+
+
 block_t mash(block_t x, block_t *keys)
-{
-	(void) x;
-	(void) keys;
-    return 0;
+{   
+	block_t result = x;
+    uint8_t byte0 = mash_op(x, 0, keys);
+	result = (result & 0xFFFFFF00) | byte0;
+
+    uint8_t byte1 = mash_op(result, 1, keys);
+	result = (result & 0xFFFF00FF) | (byte1 << 8);
+
+    uint8_t byte2 = mash_op(result, 2, keys);
+	result = (result & 0xFF00FFFF) | (byte2 << 16);
+
+    uint8_t byte3 = mash_op(result, 3, keys); 
+	result = (result & 0x00FFFFFF) | (byte3 << 24);
+    
+    return result;
 }
 
 block_t sbu_encrypt_block(block_t plain_text, block_t *expanded_keys)
 {
-	(void) plain_text;
-	(void) expanded_keys;
-
-    return 0;
+    block_t R01 = scramble(plain_text, expanded_keys, 0, reverse);
+    block_t R02 = scramble(R01, expanded_keys, 1, shuffle1);
+    block_t R03 = scramble(R02, expanded_keys, 2, shuffle4);
+    block_t R04 = scramble(R03, expanded_keys, 3, reverse);
+    block_t R05 = mash(R04, expanded_keys);
+    
+    block_t R06 = scramble(R05, expanded_keys, 4, reverse);
+    block_t R07 = scramble(R06, expanded_keys, 5, shuffle1);
+    block_t R08 = scramble(R07, expanded_keys, 6, shuffle4);
+    block_t R09 = scramble(R08, expanded_keys, 7, reverse);
+    block_t R10 = mash(R09, expanded_keys);
+    
+    block_t R11 = scramble(R10, expanded_keys, 8, reverse);
+    block_t R12 = scramble(R11, expanded_keys, 9, shuffle1);
+    block_t R13 = scramble(R12, expanded_keys, 10, shuffle4);
+    block_t R14 = scramble(R13, expanded_keys, 11, reverse);
+    block_t R15 = mash(R14, expanded_keys);
+    
+    block_t R16 = scramble(R15, expanded_keys, 12, reverse);
+    block_t R17 = scramble(R16, expanded_keys, 13, shuffle1);
+    block_t R18 = scramble(R17, expanded_keys, 14, shuffle4);
+    block_t R19 = scramble(R18, expanded_keys, 15, reverse);
+    
+    return R19;
 }
 
 block_t r_scramble(block_t x, block_t *keys, uint32_t round, permute_func_t op)
 {
-	(void) x;
-	(void) keys;
-	(void) round;
-	(void) op;
-
-    return 0;
+	block_t keyA = keys[round];
+    block_t keyB = keys[31 - round];
+    
+    block_t result = x;
+    
+    uint8_t byte0 = r_scramble_op(result, 3, keyA, keyB);
+    result = (result & 0x00FFFFFF) | (byte0 << 24);
+    
+    uint8_t byte1 = r_scramble_op(result, 2, keyA, keyB);
+    result = (result & 0xFF00FFFF) | (byte1 << 16);
+    
+    uint8_t byte2 = r_scramble_op(result, 1, keyA, keyB);
+    result = (result & 0xFFFF00FF) | (byte2 << 8);
+    
+    uint8_t byte3 = r_scramble_op(result, 0, keyA, keyB);
+    result = (result & 0xFFFFFF00) | byte3;
+    
+    return op(result);
 }
 
 block_t r_mash(block_t x, block_t *keys)
 {
-	(void) x;
-	(void) keys;
-	return 0;
+	block_t result = x;
+
+    uint8_t byte0 = mash_op(result, 3, keys);
+	result = (result & 0x00FFFFFF) | (byte0 << 24);
+
+    uint8_t byte1 = mash_op(result, 2, keys);
+	result = (result & 0xFF00FFFF) | (byte1 << 16);
+
+    uint8_t byte2 = mash_op(result, 1, keys);
+	result = (result & 0xFFFF00FF) | (byte2 << 8);
+
+    uint8_t byte3 = mash_op(result, 0, keys); 
+	result = (result & 0xFFFFFF00) | byte3;
+    
+    return result;
 }
 
 block_t sbu_decrypt_block(block_t cipher_text, block_t *expanded_keys)
 {
-	(void) cipher_text;
-	(void) expanded_keys;
-	return 0;
+    block_t R01 = r_scramble(cipher_text, expanded_keys, 15, reverse);
+    block_t R02 = r_scramble(R01, expanded_keys, 14, unshuffle4);
+    block_t R03 = r_scramble(R02, expanded_keys, 13, unshuffle1);
+    block_t R04 = r_scramble(R03, expanded_keys, 12, reverse);
+    block_t R05 = r_mash(R04, expanded_keys);
+    
+    block_t R06 = r_scramble(R05, expanded_keys, 11, reverse);
+    block_t R07 = r_scramble(R06, expanded_keys, 10, unshuffle4);
+    block_t R08 = r_scramble(R07, expanded_keys, 9, unshuffle1);
+    block_t R09 = r_scramble(R08, expanded_keys, 8, reverse);
+    block_t R10 = r_mash(R09, expanded_keys);
+    
+    block_t R11 = r_scramble(R10, expanded_keys, 7, reverse);
+    block_t R12 = r_scramble(R11, expanded_keys, 6, unshuffle4);
+    block_t R13 = r_scramble(R12, expanded_keys, 5, unshuffle1);
+    block_t R14 = r_scramble(R13, expanded_keys, 4, reverse);
+    block_t R15 = r_mash(R14, expanded_keys);
+    
+    block_t R16 = r_scramble(R15, expanded_keys, 3, reverse);
+    block_t R17 = r_scramble(R16, expanded_keys, 2, unshuffle4);
+    block_t R18 = r_scramble(R17, expanded_keys, 1, unshuffle1);
+    block_t R19 = r_scramble(R18, expanded_keys, 0, reverse);
+    
+    return R19;
 }
+
 
 void sbu_encrypt(uint8_t *plaintext_input, block_t *encrypted_output, size_t pt_len, uint32_t *expanded_keys)
 {
-	(void) plaintext_input;
-	(void) encrypted_output;
-	(void) pt_len;
-	(void) expanded_keys;
+    size_t num_blocks = ceil(pt_len/4.0);
+    for (size_t i = 0; i < num_blocks; i++) {
+        block_t current_block = 0;
+        
+        size_t bytes_in_block = 4;
+        if ((i+1) * 4 > pt_len) {
+            bytes_in_block = pt_len - (i * 4);
+        }
+        
+        for (size_t j = 0; j < bytes_in_block; j++) {
+            current_block |= ((block_t)plaintext_input[i * 4 + j] << (8 * j));
+        }
+        encrypted_output[i] = sbu_encrypt_block(current_block, expanded_keys);
+    }
 }
 
 void sbu_decrypt(block_t *encrypted_input, char *plaintext_output, size_t pt_len, uint32_t *expanded_keys)
 {
-	(void) encrypted_input;
-	(void) plaintext_output;
-	(void) pt_len;
-	(void) expanded_keys;
-}
+	size_t num_blocks = ceil(pt_len/4.0);
+	unsigned long counter = 0;
+	for (size_t i = 0; i < num_blocks; i++) {
+        uint32_t val = encrypted_input[i];
+		uint32_t decryp_val = sbu_decrypt_block(val,expanded_keys);
 
-// ----------------- Utility Functions ----------------- //
+		uint8_t first_val = (decryp_val & 0xFF000000) >> 24;
+		uint8_t second_val = (decryp_val & 0x00FF0000) >> 16;
+		uint8_t third_val = (decryp_val & 0x0000FF00) >> 8;
+		uint8_t fourth_val = (decryp_val & 0x000000FF);
+
+		if ((counter)<pt_len) plaintext_output[counter++] = fourth_val;
+		else break;
+
+		if ((counter)<pt_len) plaintext_output[counter++] = third_val;
+		else break;
+
+		if ((counter)<pt_len) plaintext_output[counter++] = second_val;
+		else break;
+
+		if ((counter)<pt_len) plaintext_output[counter++] = first_val;
+		else break;
+    }
+}
