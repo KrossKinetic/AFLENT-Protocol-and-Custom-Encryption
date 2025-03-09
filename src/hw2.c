@@ -183,7 +183,7 @@ unsigned char* build_packets(int data[], int data_length, int max_fragment_size,
 int** create_arrays(unsigned char packets[], int array_count, int *array_lengths)
 {	
 	int sentinel_value = -1;
-	int frag_count = 32;
+	int frag_count = 1024;
 	int **temp_array = malloc(array_count*sizeof(int*));
 	for (int i = 0; i < array_count; i++) {
 		temp_array[i] = malloc(frag_count*sizeof(int));
