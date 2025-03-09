@@ -11,10 +11,6 @@
 #include <errno.h>
 
 int convert_hex_to_dec(char x);
-//Packet Code:
-// cmake --build build
-// Stick to Hex interpretation of Binary
-// {0x0C, 0x00, 0x08, 0x12, 0x34, 0x56, 0x78};
 void print_packet(unsigned char packet[])
 {
 	// Array Number
@@ -631,7 +627,7 @@ void sbu_encrypt(uint8_t *plaintext_input, block_t *encrypted_output, size_t pt_
         }
         
         for (size_t j = 0; j < bytes_in_block; j++) {
-            current_block |= ((block_t)plaintext_input[i * 4 + j] << (8 * j));
+            current_block |= plaintext_input[i * 4 + j] << (8 * j);
         }
         encrypted_output[i] = sbu_encrypt_block(current_block, expanded_keys);
     }
