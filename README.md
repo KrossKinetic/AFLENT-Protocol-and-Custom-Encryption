@@ -105,3 +105,7 @@ The project uses CMake for building.
     ./build/part3
     ./build/part_4_tests
     ```
+
+---
+
+## CSE220 Completion Score: 100%
