@@ -1,6 +1,6 @@
-# CSE 220 HW2: AFLENT Protocol and Custom Encryption
+# AFLENT Protocol and Custom Encryption
 
-This project, completed for CSE 220: Systems Fundamentals I at Stony Brook University, focuses on low-level data manipulation in C. It involves implementing a custom network protocol, named **AFLENT**, and a block cipher for data encryption and decryption. The core of the project is performing byte and bit-level computations to pack, unpack, and transform data.
+This project focuses on low-level data manipulation in C. It involves implementing a custom network protocol, named **AFLENT**, and a block cipher for data encryption and decryption. The core of the project is performing byte and bit-level computations to pack, unpack, and transform data.
 
 ---
 
@@ -105,7 +105,3 @@ The project uses CMake for building.
     ./build/part3
     ./build/part_4_tests
     ```
-
----
-
-## CSE220 Completion Score: 100%, Class Average Score of HW 1-4: 60%-70%
